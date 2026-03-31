@@ -1,0 +1,180 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { Files, UploadCloud } from "lucide-react";
+
+import { AI_Prompt } from "@/components/ui/animated-ai-input";
+import { FileUploadCard, type UploadedFile } from "@/components/ui/file-upload-card";
+import { DriveUploadToast, type UploadItem } from "@/components/ui/google-drive-uploader-toast";
+import { MessageList } from "@/components/chat/message-list";
+import { TypingIndicator } from "@/components/chat/typing-indicator";
+import { AgentTimeline } from "@/components/agent/agent-timeline";
+import { useChat } from "@/lib/hooks/use-chat";
+import { useAgentStream } from "@/lib/hooks/use-agent-stream";
+import { useAppStore } from "@/lib/store/app-store";
+import { createId } from "@/lib/utils";
+
+interface ChatWorkspaceProps {
+  chatId: string;
+}
+
+function normalizeFileType(file: File) {
+  const fromName = file.name.split(".").pop()?.toLowerCase();
+  if (fromName) {
+    return fromName;
+  }
+
+  if (file.type.includes("pdf")) return "pdf";
+  if (file.type.includes("image")) return "jpg";
+  if (file.type.includes("video")) return "mp4";
+  if (file.type.includes("audio")) return "mp3";
+  return "file";
+}
+
+export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
+  const [showDropzone, setShowDropzone] = useState(false);
+  const [uploads, setUploads] = useState<UploadedFile[]>([]);
+  const [toastItems, setToastItems] = useState<UploadItem[]>([]);
+
+  const setActiveChat = useAppStore((s) => s.setActiveChat);
+  const { messages, isStreaming, error, sendMessage } = useChat(chatId);
+  const { steps } = useAgentStream();
+
+  useEffect(() => {
+    setActiveChat(chatId);
+  }, [chatId, setActiveChat]);
+
+  const startUploadSimulation = (id: string) => {
+    let progress = 0;
+
+    const interval = setInterval(() => {
+      progress += Math.floor(Math.random() * 18) + 10;
+      if (progress >= 100) {
+        progress = 100;
+        clearInterval(interval);
+      }
+
+      setUploads((prev) =>
+        prev.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                progress,
+                status: progress === 100 ? "completed" : "uploading"
+              }
+            : item
+        )
+      );
+
+      setToastItems((prev) =>
+        prev.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                progress,
+                status: progress === 100 ? "SUCCESS" : "UPLOADING"
+              }
+            : item
+        )
+      );
+    }, 260);
+  };
+
+  const onFilesChange = (files: File[]) => {
+    files.forEach((file) => {
+      const id = createId("upload");
+
+      setUploads((prev) => [
+        ...prev,
+        {
+          id,
+          file,
+          progress: 0,
+          status: "uploading"
+        }
+      ]);
+
+      setToastItems((prev) => [
+        ...prev,
+        {
+          id,
+          fileName: file.name,
+          fileType: normalizeFileType(file),
+          status: "UPLOADING",
+          progress: 0
+        }
+      ]);
+
+      startUploadSimulation(id);
+    });
+  };
+
+  const onRemoveUpload = (id: string) => {
+    setUploads((prev) => prev.filter((item) => item.id !== id));
+    setToastItems((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const sortedMessages = useMemo(() => messages, [messages]);
+
+  return (
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <section className="space-y-4">
+        <div className="rounded-3xl border border-white/15 bg-black/35 p-4 shadow-2xl backdrop-blur-xl sm:p-6">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-[0.16em] text-cyan-200/70">Conversation</p>
+              <h1 className="text-lg font-semibold text-white">Session: {chatId}</h1>
+            </div>
+
+            <button
+              onClick={() => setShowDropzone((prev) => !prev)}
+              className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-3 py-2 text-sm text-white/80 transition hover:bg-white/10"
+            >
+              {showDropzone ? <Files className="h-4 w-4" /> : <UploadCloud className="h-4 w-4" />}
+              {showDropzone ? "Hide Uploads" : "Upload Files"}
+            </button>
+          </div>
+
+          {showDropzone && (
+            <div className="mb-4">
+              <FileUploadCard
+                files={uploads}
+                onFilesChange={onFilesChange}
+                onFileRemove={onRemoveUpload}
+                onClose={() => setShowDropzone(false)}
+                className="max-w-full border-white/20 bg-black/20"
+              />
+            </div>
+          )}
+
+          <div className="max-h-[56vh] space-y-4 overflow-y-auto pr-1">
+            <MessageList messages={sortedMessages} />
+            {isStreaming && <TypingIndicator />}
+            {error && <p className="text-sm text-rose-300">{error}</p>}
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-white/15 bg-black/30 p-3 backdrop-blur-xl">
+          <AI_Prompt
+            disabled={isStreaming}
+            placeholder="Ask Omni to search your tools, draft, plan, or execute actions"
+            onSubmit={(message) => sendMessage({ chatId, message })}
+          />
+        </div>
+      </section>
+
+      <aside className="space-y-4">
+        <AgentTimeline steps={steps.slice(-8)} />
+      </aside>
+
+      <DriveUploadToast
+        items={toastItems}
+        onRemoveItem={onRemoveUpload}
+        onClearAll={() => {
+          setToastItems([]);
+          setUploads([]);
+        }}
+      />
+    </div>
+  );
+}
