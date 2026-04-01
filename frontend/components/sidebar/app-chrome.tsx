@@ -131,18 +131,19 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
       />
 
       <div className="relative z-10 lg:pl-[280px]">
-        <header className="sticky top-0 z-20 flex items-center justify-between border-b border-white/10 bg-black/35 px-4 py-3 backdrop-blur-xl sm:px-6">
+        <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border/70 bg-background/75 px-4 py-3 backdrop-blur-xl sm:px-6 dark:border-white/10 dark:bg-black/35">
           <div>
-            <p className="text-xs uppercase tracking-[0.16em] text-cyan-200/70">Omni Workspace</p>
-            <h2 className="text-sm font-medium text-white">Universal AI Operations</h2>
+            <p className="text-xs uppercase tracking-[0.16em] text-cyan-700 dark:text-cyan-200/70">Omni Workspace</p>
+            <h2 className="text-sm font-medium text-foreground dark:text-white">Universal AI Operations</h2>
           </div>
 
           <button
             onClick={() => setOpenPalette(true)}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-3 py-2 text-sm text-white/80 transition hover:bg-white/10"
+            className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/70 px-2.5 py-2 text-sm text-foreground/80 transition hover:bg-accent sm:px-3 dark:border-white/20 dark:bg-white/5 dark:text-white/80 dark:hover:bg-white/10"
           >
             <Command className="h-4 w-4" />
-            Cmd+K
+            <span className="hidden sm:inline">Cmd+K</span>
+            <span className="sm:hidden">⌘K</span>
           </button>
         </header>
 

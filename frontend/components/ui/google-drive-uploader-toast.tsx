@@ -190,7 +190,7 @@ const UploadItemRow = ({
   item: UploadItem;
   onRemove: (id: string) => void;
 }) => (
-  <div className="flex max-w-[280px] items-center justify-between py-2">
+  <div className="flex max-w-[min(70vw,280px)] items-center justify-between py-2 sm:max-w-[280px]">
     <div className="flex items-center gap-2 min-w-0 flex-1">
       <FileIcon
         fileType={item.fileType}
@@ -236,7 +236,7 @@ export const DriveUploadToast = ({
   items,
   onRemoveItem,
   onClearAll,
-  className = "fixed bottom-0 right-4 z-50 w-[320px]",
+  className = "fixed bottom-3 right-3 z-50 w-[min(92vw,320px)] sm:bottom-0 sm:right-4",
 }: {
   items: UploadItem[];
   onRemoveItem: (id: string) => void;

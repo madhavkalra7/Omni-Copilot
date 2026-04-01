@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 
 export function TypingIndicator() {
   return (
-    <div className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs text-white/75">
+    <div className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/75 px-3 py-1.5 text-xs text-muted-foreground dark:border-white/15 dark:bg-white/5 dark:text-white/75">
       <span>Omni is thinking</span>
       <div className="inline-flex items-center gap-1">
         {[0, 1, 2].map((dot) => (

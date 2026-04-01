@@ -292,9 +292,9 @@ export function AnimatedAIChat() {
     return (
         <div className="min-h-screen flex flex-col w-full items-center justify-center bg-transparent text-white p-6 relative overflow-hidden">
         <div className="absolute inset-0 w-full h-full overflow-hidden">
-                <div className="absolute top-0 left-1/4 w-96 h-96 bg-violet-500/10 rounded-full mix-blend-normal filter blur-[128px] animate-pulse" />
-                <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-500/10 rounded-full mix-blend-normal filter blur-[128px] animate-pulse delay-700" />
-                <div className="absolute top-1/4 right-1/3 w-64 h-64 bg-fuchsia-500/10 rounded-full mix-blend-normal filter blur-[96px] animate-pulse delay-1000" />
+                <div className="absolute top-0 left-1/4 h-[48vw] w-[48vw] max-h-96 max-w-96 rounded-full bg-violet-500/10 mix-blend-normal blur-[128px] animate-pulse" />
+                <div className="absolute bottom-0 right-1/4 h-[48vw] w-[48vw] max-h-96 max-w-96 rounded-full bg-indigo-500/10 mix-blend-normal blur-[128px] animate-pulse delay-700" />
+                <div className="absolute top-1/4 right-1/3 h-[34vw] w-[34vw] max-h-64 max-w-64 rounded-full bg-fuchsia-500/10 mix-blend-normal blur-[96px] animate-pulse delay-1000" />
             </div>
             <div className="w-full max-w-2xl mx-auto relative">
                 <motion.div 

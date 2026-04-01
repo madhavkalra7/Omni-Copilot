@@ -101,6 +101,24 @@ const OPENAI_ICON = (
     </>
 );
 
+const GROQ_ICON = (
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        aria-label="Groq Icon"
+        className="w-4 h-4"
+    >
+        <title>Groq Icon</title>
+        <rect x="2" y="2" width="20" height="20" rx="6" fill="currentColor" opacity="0.16" />
+        <path
+            d="M8.2 12a3.8 3.8 0 0 1 3.8-3.8h3.6v1.8H12a2 2 0 1 0 0 4h2v-1.2h-2v-1.7h3.8v4.7H12A3.8 3.8 0 0 1 8.2 12Z"
+            fill="currentColor"
+        />
+    </svg>
+);
+
 export function AI_Prompt({
     onSubmit,
     disabled = false,
@@ -111,74 +129,22 @@ export function AI_Prompt({
         minHeight: 72,
         maxHeight: 300,
     });
-    const [selectedModel, setSelectedModel] = useState("GPT-4-1 Mini");
+    const [selectedModel, setSelectedModel] = useState("GPT-5.4 Mini");
 
     const AI_MODELS = [
-        "o3-mini",
-        "Gemini 2.5 Flash",
-        "Claude 3.5 Sonnet",
-        "GPT-4-1 Mini",
-        "GPT-4-1",
+        "GPT-5.4 Mini",
+        "GPT-5.4",
+        "Llama 3.3 70B",
+        "Qwen QwQ 32B",
+        "DeepSeek R1 Distill Llama 70B",
     ];
 
     const MODEL_ICONS: Record<string, React.ReactNode> = {
-        "o3-mini": OPENAI_ICON,
-        "Gemini 2.5 Flash": (
-            <svg
-                height="1em"
-                className="w-4 h-4"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-            >
-                <title>Gemini</title>
-                <defs>
-                    <linearGradient
-                        id="lobe-icons-gemini-fill"
-                        x1="0%"
-                        x2="68.73%"
-                        y1="100%"
-                        y2="30.395%"
-                    >
-                        <stop offset="0%" stopColor="#1C7DFF" />
-                        <stop offset="52.021%" stopColor="#1C69FF" />
-                        <stop offset="100%" stopColor="#F0DCD6" />
-                    </linearGradient>
-                </defs>
-                <path
-                    d="M12 24A14.304 14.304 0 000 12 14.304 14.304 0 0012 0a14.305 14.305 0 0012 12 14.305 14.305 0 00-12 12"
-                    fill="url(#lobe-icons-gemini-fill)"
-                    fillRule="nonzero"
-                />
-            </svg>
-        ),
-        "Claude 3.5 Sonnet": (
-            <>
-                <svg
-                    fill="#000"
-                    fillRule="evenodd"
-                    className="w-4 h-4 dark:hidden block"
-                    viewBox="0 0 24 24"
-                    width="1em"
-                    xmlns="http://www.w3.org/2000/svg"
-                >
-                    <title>Anthropic Icon Light</title>
-                    <path d="M13.827 3.52h3.603L24 20h-3.603l-6.57-16.48zm-7.258 0h3.767L16.906 20h-3.674l-1.343-3.461H5.017l-1.344 3.46H0L6.57 3.522zm4.132 9.959L8.453 7.687 6.205 13.48H10.7z" />
-                </svg>
-                <svg
-                    fill="#fff"
-                    fillRule="evenodd"
-                    className="w-4 h-4 hidden dark:block"
-                    viewBox="0 0 24 24"
-                    width="1em"
-                    xmlns="http://www.w3.org/2000/svg"
-                >
-                    <title>Anthropic Icon Dark</title>
-                    <path d="M13.827 3.52h3.603L24 20h-3.603l-6.57-16.48zm-7.258 0h3.767L16.906 20h-3.674l-1.343-3.461H5.017l-1.344 3.46H0L6.57 3.522zm4.132 9.959L8.453 7.687 6.205 13.48H10.7z" />
-                </svg>
-            </>
-        ),
-        "GPT-4-1 Mini": OPENAI_ICON,
-        "GPT-4-1": OPENAI_ICON,
+        "GPT-5.4 Mini": OPENAI_ICON,
+        "GPT-5.4": OPENAI_ICON,
+        "Llama 3.3 70B": GROQ_ICON,
+        "Qwen QwQ 32B": GROQ_ICON,
+        "DeepSeek R1 Distill Llama 70B": GROQ_ICON,
     };
 
     const submitValue = () => {
@@ -231,7 +197,7 @@ export function AI_Prompt({
                                         <DropdownMenuTrigger asChild>
                                             <Button
                                                 variant="ghost"
-                                                className="flex items-center gap-1 h-8 pl-1 pr-2 text-xs rounded-md dark:text-white hover:bg-black/10 dark:hover:bg-white/10 focus-visible:ring-1 focus-visible:ring-offset-0 focus-visible:ring-blue-500"
+                                                className="flex h-8 max-w-[11rem] items-center gap-1 rounded-md pl-1 pr-2 text-xs hover:bg-black/10 focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:ring-offset-0 dark:text-white dark:hover:bg-white/10 sm:max-w-none"
                                             >
                                                 <AnimatePresence mode="wait">
                                                     <motion.div
@@ -253,12 +219,10 @@ export function AI_Prompt({
                                                         }}
                                                         className="flex items-center gap-1"
                                                     >
-                                                        {
-                                                            MODEL_ICONS[
-                                                                selectedModel
-                                                            ]
-                                                        }
-                                                        {selectedModel}
+                                                        {MODEL_ICONS[selectedModel]}
+                                                        <span className="max-w-[6.5rem] truncate sm:max-w-none">
+                                                            {selectedModel}
+                                                        </span>
                                                         <ChevronDown className="w-3 h-3 opacity-50" />
                                                     </motion.div>
                                                 </AnimatePresence>
@@ -266,7 +230,7 @@ export function AI_Prompt({
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent
                                             className={cn(
-                                                "min-w-[10rem]",
+                                                "w-[min(92vw,18rem)] sm:min-w-[12rem]",
                                                 "border-black/10 dark:border-white/10",
                                                 "bg-gradient-to-b from-white via-white to-neutral-100 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-800"
                                             )}

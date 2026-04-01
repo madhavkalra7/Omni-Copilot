@@ -19,7 +19,7 @@ export default function LoginPage() {
 
   return (
     <div className="relative min-h-screen">
-      <div className="fixed inset-0 -z-10">
+      <div className="fixed inset-0 -z-10 opacity-60">
         <BackgroundPaths title="Omni Copilot" showContent={false} />
       </div>
 
@@ -27,14 +27,14 @@ export default function LoginPage() {
         <GlowCard
           glowColor="blue"
           customSize
-          width={420}
-          className="rounded-3xl border border-white/15 bg-black/50 p-8 backdrop-blur-2xl"
+          width="min(420px, 100%)"
+          className="rounded-3xl border border-border/70 bg-background/75 p-8 backdrop-blur-2xl dark:border-white/15 dark:bg-black/50"
         >
           <div className="space-y-6">
             <div className="space-y-2">
-              <p className="text-xs uppercase tracking-[0.2em] text-cyan-200/80">Universal Agent</p>
-              <h1 className="text-4xl font-semibold text-white">Omni Copilot</h1>
-              <p className="text-sm text-white/70">
+              <p className="text-xs uppercase tracking-[0.2em] text-cyan-700 dark:text-cyan-200/80">Universal Agent</p>
+              <h1 className="text-4xl font-semibold text-foreground dark:text-white">Omni Copilot</h1>
+              <p className="text-sm text-muted-foreground dark:text-white/70">
                 Connect your docs, calendar, mail, and code tools into one intelligent command center.
               </p>
             </div>
@@ -54,7 +54,7 @@ export default function LoginPage() {
               )}
             </Button>
 
-            <p className="text-xs text-white/50">
+            <p className="text-xs text-muted-foreground dark:text-white/50">
               By continuing, you allow Omni Copilot to securely request access to your connected tools.
             </p>
           </div>

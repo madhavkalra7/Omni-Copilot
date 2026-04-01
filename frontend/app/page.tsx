@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { HomeHero } from "@/components/landing/home-hero";
 
 export default function HomePage() {
-  redirect("/chat/new");
+  return <HomeHero />;
 }

@@ -14,11 +14,11 @@ class Settings(BaseSettings):
     api_port: int = 8000
     cors_allow_origins: str = "http://localhost:3000"
 
-    anthropic_api_key: str = ""
+    groq_api_key: str = ""
     openai_api_key: str = ""
-    openai_embedding_model: str = "text-embedding-3-small"
-    default_model: str = "claude-sonnet-4-20250514"
-    fallback_model: str = "gpt-4o"
+    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+    default_model: str = "gpt-5.4"
+    fallback_model: str = "gpt-5.4-mini"
 
     upstash_redis_rest_url: str = ""
     upstash_redis_rest_token: str = ""

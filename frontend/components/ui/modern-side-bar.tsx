@@ -64,7 +64,7 @@ export function Sidebar({ className = "", onSignOut }: SidebarProps) {
     <>
       <button
         onClick={() => setIsOpen((prev) => !prev)}
-        className="fixed left-4 top-4 z-50 rounded-xl border border-white/20 bg-black/60 p-2 text-white backdrop-blur-xl lg:hidden"
+        className="fixed left-4 top-4 z-50 rounded-xl border border-border/70 bg-background/85 p-2 text-foreground backdrop-blur-xl lg:hidden dark:border-white/20 dark:bg-black/60 dark:text-white"
         aria-label="Toggle navigation"
       >
         {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -89,9 +89,9 @@ export function Sidebar({ className = "", onSignOut }: SidebarProps) {
           x: isOpen ? 0 : -320
         }}
         transition={{ type: "spring", stiffness: 320, damping: 30 }}
-        className={`fixed inset-y-0 left-0 z-40 flex h-full flex-col border-r border-white/10 bg-black/50 backdrop-blur-2xl lg:translate-x-0 ${className}`}
+        className={`fixed inset-y-0 left-0 z-40 flex h-full flex-col border-r border-border/70 bg-background/80 backdrop-blur-2xl dark:border-white/10 dark:bg-black/50 lg:translate-x-0 ${className}`}
       >
-        <div className="flex items-center justify-between border-b border-white/10 p-4">
+        <div className="flex items-center justify-between border-b border-border/70 p-4 dark:border-white/10">
           <AnimatePresence mode="wait">
             {!isCollapsed ? (
               <motion.div
@@ -105,8 +105,8 @@ export function Sidebar({ className = "", onSignOut }: SidebarProps) {
                   <Sparkles className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-white">Omni Copilot</p>
-                  <p className="text-xs text-white/60">Universal agent</p>
+                  <p className="text-sm font-semibold text-foreground dark:text-white">Omni Copilot</p>
+                  <p className="text-xs text-muted-foreground dark:text-white/60">Universal agent</p>
                 </div>
               </motion.div>
             ) : (
@@ -123,7 +123,7 @@ export function Sidebar({ className = "", onSignOut }: SidebarProps) {
           </AnimatePresence>
 
           <button
-            className="hidden rounded-lg p-1 text-white/70 transition hover:bg-white/10 hover:text-white lg:block"
+            className="hidden rounded-lg p-1 text-foreground/70 transition hover:bg-accent hover:text-foreground dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white lg:block"
             onClick={() => setIsCollapsed((prev) => !prev)}
             aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
@@ -147,8 +147,8 @@ export function Sidebar({ className = "", onSignOut }: SidebarProps) {
                 }}
                 className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition ${
                   isActive
-                    ? "bg-white text-black shadow-md"
-                    : "text-white/80 hover:bg-white/10 hover:text-white"
+                    ? "bg-foreground text-background shadow-md"
+                    : "text-foreground/80 hover:bg-accent hover:text-foreground dark:text-white/80 dark:hover:bg-white/10 dark:hover:text-white"
                 } ${isCollapsed ? "justify-center" : ""}`}
                 title={isCollapsed ? item.name : undefined}
               >
@@ -161,7 +161,7 @@ export function Sidebar({ className = "", onSignOut }: SidebarProps) {
                 )}
 
                 {isCollapsed && (
-                  <span className="pointer-events-none absolute left-full ml-2 hidden whitespace-nowrap rounded-md border border-white/10 bg-black/90 px-2 py-1 text-xs text-white group-hover:block">
+                  <span className="pointer-events-none absolute left-full ml-2 hidden whitespace-nowrap rounded-md border border-border/70 bg-background/95 px-2 py-1 text-xs text-foreground shadow-md group-hover:block dark:border-white/10 dark:bg-black/90 dark:text-white">
                     {item.name}
                   </span>
                 )}
@@ -170,9 +170,9 @@ export function Sidebar({ className = "", onSignOut }: SidebarProps) {
           })}
         </nav>
 
-        <div className="space-y-2 border-t border-white/10 p-3">
+        <div className="space-y-2 border-t border-border/70 p-3 dark:border-white/10">
           <button
-            className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-white/70 transition hover:bg-white/10 hover:text-white ${
+            className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-foreground/70 transition hover:bg-accent hover:text-foreground dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white ${
               isCollapsed ? "justify-center" : ""
             }`}
             onClick={() => router.push("/chat/new")}

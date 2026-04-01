@@ -77,9 +77,9 @@ export default function MemoryPage() {
   return (
     <div className="space-y-5">
       <div>
-        <p className="text-xs uppercase tracking-[0.16em] text-cyan-200/70">Memory</p>
-        <h1 className="text-2xl font-semibold text-white">Personal memory graph</h1>
-        <p className="text-sm text-white/65">Review and edit the context Omni stores for better long-term assistance.</p>
+        <p className="text-xs uppercase tracking-[0.16em] text-cyan-700 dark:text-cyan-200/70">Memory</p>
+        <h1 className="text-2xl font-semibold text-foreground dark:text-white">Personal memory graph</h1>
+        <p className="text-sm text-muted-foreground dark:text-white/65">Review and edit the context Omni stores for better long-term assistance.</p>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -88,17 +88,17 @@ export default function MemoryPage() {
             key={item.id}
             glowColor="purple"
             customSize
-            className="rounded-2xl border border-white/15 bg-black/35 p-5 backdrop-blur-xl"
+            className="rounded-2xl border border-border/70 bg-background/70 p-5 backdrop-blur-xl dark:border-white/15 dark:bg-black/35"
           >
             <div className="space-y-2">
-              <p className="text-xs uppercase tracking-[0.12em] text-white/55">{item.label}</p>
+              <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground dark:text-white/55">{item.label}</p>
               <textarea
                 value={item.value}
                 onChange={(event) => {
                   const value = event.target.value;
                   setMemory((prev) => prev.map((entry) => (entry.id === item.id ? { ...entry, value } : entry)));
                 }}
-                className="min-h-[88px] w-full resize-none rounded-xl border border-white/15 bg-white/5 p-3 text-sm text-white/90 outline-none focus:border-cyan-300/60"
+                className="min-h-[88px] w-full resize-none rounded-xl border border-border/70 bg-background/70 p-3 text-sm text-foreground outline-none focus:border-cyan-500/60 dark:border-white/15 dark:bg-white/5 dark:text-white/90 dark:focus:border-cyan-300/60"
               />
             </div>
           </GlowCard>
@@ -113,7 +113,7 @@ export default function MemoryPage() {
 
         <Button
           variant="secondary"
-          className="bg-white/10 text-white hover:bg-white/20"
+          className="bg-secondary/80 text-secondary-foreground hover:bg-secondary"
           onClick={() => setShowOrbit((prev) => !prev)}
         >
           {showOrbit ? "Hide" : "Show"} orbital memory map
@@ -121,7 +121,7 @@ export default function MemoryPage() {
       </div>
 
       {showOrbit && (
-        <div className="overflow-hidden rounded-3xl border border-white/15">
+        <div className="overflow-hidden rounded-3xl border border-border/70 dark:border-white/15">
           <RadialOrbitalTimeline timelineData={orbitData} />
         </div>
       )}

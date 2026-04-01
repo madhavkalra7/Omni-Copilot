@@ -117,18 +117,18 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
   const sortedMessages = useMemo(() => messages, [messages]);
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">
       <section className="space-y-4">
-        <div className="rounded-3xl border border-white/15 bg-black/35 p-4 shadow-2xl backdrop-blur-xl sm:p-6">
+        <div className="rounded-3xl border border-border/70 bg-background/75 p-4 shadow-2xl backdrop-blur-xl dark:border-white/15 dark:bg-black/35 sm:p-6">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs uppercase tracking-[0.16em] text-cyan-200/70">Conversation</p>
-              <h1 className="text-lg font-semibold text-white">Session: {chatId}</h1>
+              <p className="text-xs uppercase tracking-[0.16em] text-cyan-700 dark:text-cyan-200/70">Conversation</p>
+              <h1 className="text-lg font-semibold text-foreground dark:text-white">Session: {chatId}</h1>
             </div>
 
             <button
               onClick={() => setShowDropzone((prev) => !prev)}
-              className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-3 py-2 text-sm text-white/80 transition hover:bg-white/10"
+              className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/70 px-3 py-2 text-sm text-foreground/80 transition hover:bg-accent dark:border-white/20 dark:bg-white/5 dark:text-white/80 dark:hover:bg-white/10"
             >
               {showDropzone ? <Files className="h-4 w-4" /> : <UploadCloud className="h-4 w-4" />}
               {showDropzone ? "Hide Uploads" : "Upload Files"}
@@ -142,19 +142,19 @@ export function ChatWorkspace({ chatId }: ChatWorkspaceProps) {
                 onFilesChange={onFilesChange}
                 onFileRemove={onRemoveUpload}
                 onClose={() => setShowDropzone(false)}
-                className="max-w-full border-white/20 bg-black/20"
+                className="max-w-full border-border/70 bg-background/70 dark:border-white/20 dark:bg-black/20"
               />
             </div>
           )}
 
-          <div className="max-h-[56vh] space-y-4 overflow-y-auto pr-1">
+          <div className="max-h-[50vh] space-y-4 overflow-y-auto pr-1 sm:max-h-[56vh]">
             <MessageList messages={sortedMessages} />
             {isStreaming && <TypingIndicator />}
-            {error && <p className="text-sm text-rose-300">{error}</p>}
+            {error && <p className="text-sm text-rose-600 dark:text-rose-300">{error}</p>}
           </div>
         </div>
 
-        <div className="rounded-3xl border border-white/15 bg-black/30 p-3 backdrop-blur-xl">
+        <div className="rounded-3xl border border-border/70 bg-background/75 p-3 backdrop-blur-xl dark:border-white/15 dark:bg-black/30">
           <AI_Prompt
             disabled={isStreaming}
             placeholder="Ask Omni to search your tools, draft, plan, or execute actions"

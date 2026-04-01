@@ -14,7 +14,13 @@ backend/.mypy_cache/
 backend/.ruff_cache/
 backend/.env
 backend/.env.*
+!backend/.env.example
 backend/*.pyc
+backend/**/*.pyc
+backend/**/*.pyo
+backend/**/__pycache__/
+__pycache__/
+*.py[cod]
 
 # OS/editor
 .DS_Store

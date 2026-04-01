@@ -18,9 +18,9 @@ export default function IntegrationsPage() {
   return (
     <div className="space-y-5">
       <div>
-        <p className="text-xs uppercase tracking-[0.16em] text-cyan-200/70">Integrations</p>
-        <h1 className="text-2xl font-semibold text-white">Connect your tools</h1>
-        <p className="text-sm text-white/65">
+        <p className="text-xs uppercase tracking-[0.16em] text-cyan-700 dark:text-cyan-200/70">Integrations</p>
+        <h1 className="text-2xl font-semibold text-foreground dark:text-white">Connect your tools</h1>
+        <p className="text-sm text-muted-foreground dark:text-white/65">
           Authorize providers and let Omni orchestrate tasks across your workspace.
         </p>
       </div>
