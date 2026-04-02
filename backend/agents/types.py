@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Literal, TypedDict
 
 AgentStatusKind = Literal["running", "completed", "failed"]
-AgentRoute = Literal["docs", "comms", "calendar", "code", "browser", "memory"]
+AgentRoute = Literal["chat", "docs", "comms", "calendar", "code", "browser", "memory"]
 
 
 class AgentEvent(TypedDict):

@@ -1,10 +1,29 @@
 ﻿from __future__ import annotations
 
+import re
+import warnings
+from dataclasses import dataclass
 from typing import cast
+
+# Keep compatibility with environments where langchain no longer exposes
+# module-level debug/verbose attributes expected by older integrations.
+try:
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        import langchain  # type: ignore[import-not-found]
+
+    module_dict = getattr(langchain, "__dict__", {})
+    if "debug" not in module_dict:
+        setattr(langchain, "debug", False)
+    if "verbose" not in module_dict:
+        setattr(langchain, "verbose", False)
+except Exception:
+    pass
 
 from langgraph.graph import END, START, StateGraph
 
 from agents.browser_agent import BrowserAgent
+from agents.chat_agent import ChatAgent
 from agents.calendar_agent import CalendarAgent
 from agents.code_agent import CodeAgent
 from agents.comms_agent import CommsAgent
@@ -14,11 +33,306 @@ from agents.types import AgentOutput, AgentRoute, GraphState
 
 
 docs_agent = DocsAgent()
+chat_agent = ChatAgent()
 comms_agent = CommsAgent()
 calendar_agent = CalendarAgent()
 code_agent = CodeAgent()
 browser_agent = BrowserAgent()
 memory_agent = MemoryAgent()
+
+ACTION_ROUTES: set[AgentRoute] = {"docs", "comms", "calendar", "code", "browser", "memory"}
+APPROVAL_WORDS = {"go", "yes", "proceed", "do it", "haan", "kr do", "haa"}
+CANCEL_WORDS = {"cancel", "abort", "stop"}
+DIRECT_ANSWER_PHRASES = {
+    "just answer",
+    "no plan needed",
+    "without plan",
+    "skip plan",
+}
+IRREVERSIBLE_KEYWORDS = {
+    "send",
+    "delete",
+    "remove",
+    "submit",
+    "push",
+    "merge",
+    "publish",
+    "transfer",
+    "pay",
+}
+
+
+@dataclass
+class PendingPlan:
+    request: str
+    route: AgentRoute
+    plan_text: str
+    steps: list[str]
+    tools: list[str]
+    estimated: str
+    risk: str
+
+
+PENDING_PLANS: dict[str, PendingPlan] = {}
+LAST_LOCAL_OPEN_REQUESTS: dict[str, str] = {}
+
+
+def _normalize_message(message: str) -> str:
+    lowered = message.strip().lower()
+    lowered = re.sub(r"\s+", " ", lowered)
+    return lowered
+
+
+def _extract_change_request(message: str) -> str | None:
+    match = re.match(r"^\s*change\s*:\s*(.+)$", message, flags=re.IGNORECASE | re.DOTALL)
+    if not match:
+        return None
+    change_text = match.group(1).strip()
+    return change_text or None
+
+
+def _is_approval(message: str) -> bool:
+    normalized = re.sub(r"[^a-zA-Z\s]", "", _normalize_message(message))
+    return normalized in APPROVAL_WORDS
+
+
+def _is_cancel(message: str) -> bool:
+    normalized = re.sub(r"[^a-zA-Z\s]", "", _normalize_message(message))
+    return normalized in CANCEL_WORDS
+
+
+def _is_action_route(route: AgentRoute) -> bool:
+    return route in ACTION_ROUTES
+
+
+def _wants_direct_answer(message: str) -> bool:
+    normalized = _normalize_message(message)
+    return any(phrase in normalized for phrase in DIRECT_ANSWER_PHRASES)
+
+
+def _plan_blueprint(route: AgentRoute) -> tuple[list[str], list[str], str]:
+    if route == "docs":
+        return (
+            [
+                "[orchestrator] -> classify request and document scope",
+                "[docs_agent] -> search Google Drive and local files",
+                "[docs_agent] -> summarize findings with next action",
+            ],
+            ["docs_agent", "search_drive_files", "search_local_files"],
+            "~3 actions, ~10 seconds",
+        )
+    if route == "comms":
+        return (
+            [
+                "[orchestrator] -> classify communication request",
+                "[comms_agent] -> scan Gmail and Slack matches",
+                "[comms_agent] -> build concise communication digest",
+            ],
+            ["comms_agent", "search_gmail_threads", "search_slack_messages"],
+            "~3 actions, ~10 seconds",
+        )
+    if route == "calendar":
+        return (
+            [
+                "[orchestrator] -> classify calendar request",
+                "[calendar_agent] -> fetch relevant upcoming events",
+                "[calendar_agent] -> return schedule summary",
+            ],
+            ["calendar_agent", "list_upcoming_events"],
+            "~3 actions, ~10 seconds",
+        )
+    if route == "code":
+        return (
+            [
+                "[orchestrator] -> classify code request",
+                "[code_agent] -> search pull requests and code context",
+                "[code_agent] -> return review-ready summary",
+            ],
+            ["code_agent", "search_pull_requests"],
+            "~3 actions, ~10 seconds",
+        )
+    if route == "browser":
+        return (
+            [
+                "[orchestrator] -> classify browser automation request",
+                "[browser_agent] -> run browser task workflow",
+                "[browser_agent] -> return execution result",
+            ],
+            ["browser_agent", "run_browser_task"],
+            "~3 actions, ~15 seconds",
+        )
+    if route == "memory":
+        return (
+            [
+                "[orchestrator] -> classify memory request",
+                "[memory_agent] -> retrieve long-term memory matches",
+                "[memory_agent] -> return memory-backed response",
+            ],
+            ["memory_agent", "memory_store.search_memory"],
+            "~3 actions, ~8 seconds",
+        )
+    return (
+        [
+            "[orchestrator] -> classify request",
+            "[chat_agent] -> prepare response",
+            "[chat_agent] -> return final answer",
+        ],
+        ["chat_agent"],
+        "~3 actions, ~6 seconds",
+    )
+
+
+def _risk_level(route: AgentRoute, request: str) -> str:
+    normalized = _normalize_message(request)
+    if any(keyword in normalized for keyword in IRREVERSIBLE_KEYWORDS):
+        return "High"
+
+    if route == "docs" and _is_local_open_intent(request):
+        return "Low"
+
+    if route == "browser":
+        return "Medium"
+    if route in {"calendar", "comms"}:
+        return "Low"
+    return "None"
+
+
+def _format_plan(goal: str, steps: list[str], tools: list[str], estimated: str, risk: str) -> str:
+    lines = [
+        "\u256d\u2500 PLAN \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e",
+        "\u2502                                              \u2502",
+        f"\u2502  Goal: {goal}",
+        "\u2502                                              \u2502",
+        "\u2502  Steps:",
+    ]
+
+    for index, step in enumerate(steps, start=1):
+        lines.append(f"\u2502  {index}. {step}")
+
+    lines.extend(
+        [
+            "\u2502                                              \u2502",
+            f"\u2502  Tools needed: {', '.join(tools)}",
+            f"\u2502  Estimated: {estimated}",
+            f"\u2502  Risk: {risk}",
+        ]
+    )
+
+    if risk == "High":
+        lines.append(
+            "\u2502  \u26a0\ufe0f  WARNING: Step 3 is irreversible (requested action may be permanently applied)"
+        )
+
+    lines.extend(
+        [
+            "\u2502                                              \u2502",
+            "\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f",
+            "",
+            "  \u2705 Type \"go\" or \"yes\" to execute this plan",
+            "  \u270f\ufe0f  Type \"change: [your edit]\" to modify it",
+            "  \u274c Type \"cancel\" to abort",
+        ]
+    )
+
+    return "\n".join(lines)
+
+
+def _build_pending_plan(request: str, route: AgentRoute) -> PendingPlan:
+    if route == "docs" and _is_local_open_intent(request):
+        steps = [
+            "[orchestrator] -> confirm local file open request",
+            "[docs_agent/local_files] -> find best matching local media file",
+            "[docs_agent/local_files] -> open matched file on device",
+        ]
+        tools = ["docs_agent", "find_best_local_file", "open_local_file"]
+        estimated = "~3 actions, ~8 seconds"
+    else:
+        steps, tools, estimated = _plan_blueprint(route)
+    risk = _risk_level(route, request)
+    goal = request.strip() or "Handle user request"
+    plan_text = _format_plan(goal=goal, steps=steps, tools=tools, estimated=estimated, risk=risk)
+    return PendingPlan(
+        request=request,
+        route=route,
+        plan_text=plan_text,
+        steps=steps,
+        tools=tools,
+        estimated=estimated,
+        risk=risk,
+    )
+
+
+async def _execute_route(route: AgentRoute, message: str) -> AgentOutput:
+    if route == "docs":
+        return await docs_agent.run(message)
+    if route == "comms":
+        return await comms_agent.run(message)
+    if route == "calendar":
+        return await calendar_agent.run(message)
+    if route == "code":
+        return await code_agent.run(message)
+    if route == "browser":
+        return await browser_agent.run(message)
+    if route == "memory":
+        return await memory_agent.run(message)
+    return await chat_agent.run(message)
+
+
+async def _execute_pending_plan(plan: PendingPlan) -> tuple[bool, str, AgentOutput | None]:
+    progress_lines = [
+        "Executing plan...",
+        "\u2192 Step 1: [orchestrator] -> validate approved plan and prepare execution ... \u2713 done",
+    ]
+
+    try:
+        output = await _execute_route(plan.route, plan.request)
+    except Exception as exc:
+        progress_lines.append(
+            "\u2192 Step 2: [agent] -> execute approved action ... \u2717 failed"
+        )
+        failure_message = (
+            "\n".join(progress_lines)
+            + f"\n\nPaused due to error: {exc}\nPlease type \"change: ...\" to revise or \"cancel\"."
+        )
+        return False, failure_message, None
+
+    progress_lines.append(
+        "\u2192 Step 2: [agent] -> execute approved action ... \u2713 done"
+    )
+    progress_lines.append(
+        "\u2192 Step 3: [orchestrator] -> assemble final response ... \u2713 done"
+    )
+
+    result_message = (
+        "\n".join(progress_lines)
+        + f"\n\nResult: {output['answer']}\n\nAnything needs adjustment?"
+    )
+    return True, result_message, output
+
+
+def _is_filename_followup_message(message: str) -> bool:
+    normalized = _normalize_message(message)
+    has_media_reference = bool(
+        re.search(r"\b(mp4|mkv|avi|mov|webm|wmv|flv|m4v)\b", normalized)
+    )
+    followup_words = ["file name", "filename", "this is", "named"]
+    return has_media_reference and any(word in normalized for word in followup_words)
+
+
+def _rewrite_followup_for_local_open(message: str) -> str:
+    return f"open {message.strip()} from my pc"
+
+
+def _is_local_open_intent(message: str) -> bool:
+    normalized = _normalize_message(message)
+    action_words = ["open", "oepn", "opne", "play", "launch", "start"]
+    local_words = ["pc", "laptop", "local", "computer", "movie", "video", "from my", "drive", "disk", "vlc"]
+    has_action_and_local = any(word in normalized for word in action_words) and any(
+        word in normalized for word in local_words
+    )
+
+    has_filename_hint = _is_filename_followup_message(message)
+    return has_action_and_local or has_filename_hint
 
 
 def route_intent(message: str) -> AgentRoute:
@@ -34,7 +348,29 @@ def route_intent(message: str) -> AgentRoute:
         return "browser"
     if any(word in text for word in ["remember", "memory", "preference", "context"]):
         return "memory"
-    return "docs"
+    if _is_local_open_intent(text):
+        return "docs"
+    if any(
+        word in text
+        for word in [
+            "doc",
+            "docs",
+            "document",
+            "file",
+            "files",
+            "drive",
+            "pdf",
+            "notion",
+            "summary",
+            "summarize",
+            "brief",
+            "notes",
+            "folder",
+            "upload",
+        ]
+    ):
+        return "docs"
+    return "chat"
 
 
 async def orchestrator_node(state: GraphState) -> dict:
@@ -42,6 +378,11 @@ async def orchestrator_node(state: GraphState) -> dict:
     return {
         "route": route,
     }
+
+
+async def chat_node(state: GraphState) -> dict:
+    output: AgentOutput = await chat_agent.run(state["message"])
+    return output
 
 
 async def docs_node(state: GraphState) -> dict:
@@ -82,6 +423,7 @@ def build_graph():
     graph = StateGraph(GraphState)
 
     graph.add_node("orchestrator", orchestrator_node)
+    graph.add_node("chat", chat_node)
     graph.add_node("docs", docs_node)
     graph.add_node("comms", comms_node)
     graph.add_node("calendar", calendar_node)
@@ -94,6 +436,7 @@ def build_graph():
         "orchestrator",
         pick_route,
         {
+            "chat": "chat",
             "docs": "docs",
             "comms": "comms",
             "calendar": "calendar",
@@ -103,6 +446,7 @@ def build_graph():
         },
     )
 
+    graph.add_edge("chat", END)
     graph.add_edge("docs", END)
     graph.add_edge("comms", END)
     graph.add_edge("calendar", END)
@@ -117,10 +461,156 @@ graph = build_graph()
 
 
 async def run_orchestration(chat_id: str, message: str) -> GraphState:
+    pending_plan = PENDING_PLANS.get(chat_id)
+
+    if not pending_plan:
+        direct_change = _extract_change_request(message)
+        if direct_change:
+            return {
+                "chat_id": chat_id,
+                "message": message,
+                "route": "chat",
+                "answer": "No pending plan found. Share a new actionable request first, and I will create a plan.",
+                "events": [
+                    {
+                        "agent": "OrchestratorAgent",
+                        "message": "Change request ignored because no plan exists",
+                        "status": "completed",
+                    }
+                ],
+                "tool_results": {},
+            }
+
+    if pending_plan:
+        if _is_cancel(message):
+            del PENDING_PLANS[chat_id]
+            return {
+                "chat_id": chat_id,
+                "message": message,
+                "route": "chat",
+                "answer": "Plan canceled. No actions were executed.",
+                "events": [
+                    {
+                        "agent": "OrchestratorAgent",
+                        "message": "Canceled pending plan",
+                        "status": "completed",
+                    }
+                ],
+                "tool_results": {},
+            }
+
+        change_request = _extract_change_request(message)
+        if change_request:
+            revised_request = f"{pending_plan.request}\nRevision request: {change_request}"
+            revised_route = route_intent(revised_request)
+            if not _is_action_route(revised_route):
+                revised_route = pending_plan.route
+
+            updated_plan = _build_pending_plan(revised_request, revised_route)
+            PENDING_PLANS[chat_id] = updated_plan
+
+            return {
+                "chat_id": chat_id,
+                "message": message,
+                "route": revised_route,
+                "answer": "Acknowledged. I updated the plan based on your change request.\n\n"
+                + updated_plan.plan_text,
+                "events": [
+                    {
+                        "agent": "OrchestratorAgent",
+                        "message": "Plan revised and awaiting approval",
+                        "status": "completed",
+                    }
+                ],
+                "tool_results": {},
+            }
+
+        if _is_approval(message):
+            succeeded, execution_message, output = await _execute_pending_plan(pending_plan)
+            if succeeded:
+                if pending_plan.route == "docs" and _is_local_open_intent(pending_plan.request):
+                    LAST_LOCAL_OPEN_REQUESTS[chat_id] = pending_plan.request
+                del PENDING_PLANS[chat_id]
+                return {
+                    "chat_id": chat_id,
+                    "message": message,
+                    "route": pending_plan.route,
+                    "answer": execution_message,
+                    "events": output["events"] if output else [],
+                    "tool_results": output["tool_results"] if output else {},
+                }
+
+            return {
+                "chat_id": chat_id,
+                "message": message,
+                "route": pending_plan.route,
+                "answer": execution_message,
+                "events": [
+                    {
+                        "agent": "OrchestratorAgent",
+                        "message": "Execution paused after failure",
+                        "status": "failed",
+                    }
+                ],
+                "tool_results": {},
+            }
+
+        return {
+            "chat_id": chat_id,
+            "message": message,
+            "route": pending_plan.route,
+            "answer": "A plan is waiting for approval.\n\n" + pending_plan.plan_text,
+            "events": [
+                {
+                    "agent": "OrchestratorAgent",
+                    "message": "Waiting for go/yes/change/cancel",
+                    "status": "completed",
+                }
+            ],
+            "tool_results": {},
+        }
+
+    detected_route = route_intent(message)
+    effective_message = message
+    if chat_id in LAST_LOCAL_OPEN_REQUESTS and _is_filename_followup_message(message):
+        effective_message = _rewrite_followup_for_local_open(message)
+        detected_route = "docs"
+
+    if _wants_direct_answer(message) and _is_action_route(detected_route):
+        direct_output = await _execute_route(detected_route, effective_message)
+        return {
+            "chat_id": chat_id,
+            "message": message,
+            "route": detected_route,
+            "answer": direct_output["answer"],
+            "events": direct_output["events"],
+            "tool_results": direct_output["tool_results"],
+        }
+
+    if _is_action_route(detected_route):
+        pending_plan = _build_pending_plan(effective_message, detected_route)
+        PENDING_PLANS[chat_id] = pending_plan
+        if detected_route == "docs" and _is_local_open_intent(effective_message):
+            LAST_LOCAL_OPEN_REQUESTS[chat_id] = effective_message
+        return {
+            "chat_id": chat_id,
+            "message": message,
+            "route": detected_route,
+            "answer": pending_plan.plan_text,
+            "events": [
+                {
+                    "agent": "OrchestratorAgent",
+                    "message": "Plan prepared and awaiting approval",
+                    "status": "completed",
+                }
+            ],
+            "tool_results": {},
+        }
+
     initial_state: GraphState = {
         "chat_id": chat_id,
         "message": message,
-        "route": "docs",
+        "route": "chat",
         "answer": "",
         "events": [],
         "tool_results": {},
